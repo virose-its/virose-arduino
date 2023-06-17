@@ -87,7 +87,7 @@ PWMTask::PWMTask(uint8_t pin, uint8_t pwmChannel) {
 void PWMTask::Task(void *pvParameters) {
     for (;;) {
         switch (mode) {
-            case FADE:
+            case LEDState::FADE:
                 for (int j = 0; j <= brightness; j++) {
                     ledcWrite(pwmChannel, j);
                     vTaskDelay((onTime / brightness) / portTICK_PERIOD_MS);
@@ -98,47 +98,58 @@ void PWMTask::Task(void *pvParameters) {
                 }
                 break;
 
-            case FLICKER:
+            case LEDState::FLICKER:
                 ledcWrite(pwmChannel, 255);
                 vTaskDelay(onTime / portTICK_PERIOD_MS);
                 ledcWrite(pwmChannel, 0);
                 vTaskDelay(offTime / portTICK_PERIOD_MS);
                 break;
 
-            case ON:
+            case LEDState::ON:
                 ledcWrite(pwmChannel, 255);
-                vTaskDelay(500 / portTICK_PERIOD_MS);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
                 break;
 
-            case OFF:
+            case LEDState::OFF_AFTER:
+                ledcWrite(pwmChannel, 255);
+                vTaskDelay(onTime / portTICK_PERIOD_MS);
+                this->mode = LEDState::OFF;
+                break;
+
+            case LEDState::OFF:
                 ledcWrite(pwmChannel, 0);
-                vTaskDelay(500 / portTICK_PERIOD_MS);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
                 break;
 
             default:
-                vTaskDelay(500 / portTICK_PERIOD_MS);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
                 break;
         }
     }
 }
 
 void PWMTask::setFade(uint16_t fadeInTime, uint16_t fadeOutTime, uint8_t brightness) {
-    mode = FADE;
+    mode = LEDState::FADE;
     onTime = fadeInTime;
     offTime = fadeOutTime;
     this->brightness = brightness;
 }
 
 void PWMTask::setFlicker(uint16_t onTime, uint16_t offTime) {
-    mode = FLICKER;
+    mode = LEDState::FLICKER;
     this->onTime = onTime;
     this->offTime = offTime;
 }
 
 void PWMTask::turnOn() {
-    mode = ON;
+    mode = LEDState::ON;
+}
+
+void PWMTask::turnOffAfter(uint16_t onTime) {
+    mode = LEDState::OFF_AFTER;
+    this->onTime = onTime;
 }
 
 void PWMTask::turnOff() {
-    mode = OFF;
+    mode = LEDState::OFF;
 }
